@@ -6,20 +6,18 @@ plugins:
 
 provider:
   name: aws
-  runtime: nodejs8.10
+  runtime: nodejs10.x
   stage: dev
   region: us-east-1
   versionFunctions: false
   
 functions:
-  ship-logs-to-logzio:
+  ship-logs-to-fluentd:
     handler: functions/ship-logs/handler.handler
-    description: Sends CloudWatch logs to Logz.io
+    description: Sends CloudWatch logs to fluentd
     memorySize: 128
     environment:
-      logstash_host: listener.logz.io
-      logstash_port: 5015
-      token: rBrdvFgguTSCLHhFfLDmyuGTQZhDYyZt
+      logstash_host: logs.danquack.dev
 
 resources:
   Resources:
@@ -30,5 +28,5 @@ resources:
         FunctionName:
           Fn::Join:
             - ""
-            - - "Ref" : "ShipDashlogsDashtoDashlogzioLambdaFunction"
+            - - "Ref" : "ShipDashlogsDashtoDashfluentdLambdaFunction"
         Principal: logs.#{AWS::Region}.amazonaws.com
