@@ -1,43 +1,41 @@
 const Promise = require('bluebird')
-const parse   = require('./parse')
-const net     = require('net')
-const host    = process.env.logstash_host
-const port    = process.env.logstash_port
-const token   = process.env.token
+const parse = require('./parse')
+const axios = require('axios')
+const host = process.env.logstash_host
 
 const processAll = async (logGroup, logStream, logEvents) => {
   const lambdaVersion = parse.lambdaVersion(logStream);
-  const functionName  = parse.functionName(logGroup);
+  const functionName = parse.functionName(logGroup);
 
-  await new Promise((resolve, reject) => {
-    const socket = net.connect(port, host, function() {
-      socket.setEncoding('utf8')
+  const promises = []
 
-      for (const logEvent of logEvents) {
-        try {
-          const log = parse.logMessage(logEvent)
-          if (log) {
-            log.logStream     = logStream
-            log.logGroup      = logGroup
-            log.functionName  = functionName
-            log.lambdaVersion = lambdaVersion
-            log.fields        = log.fields || {}
-            log.type          = "cloudwatch"
-            log.token         = token
+  for (const logEvent of logEvents) {
+    try {
+      const log = parse.logMessage(logEvent)
+      if (log) {
+        log.logStream = logStream
+        log.logGroup = logGroup
+        log.functionName = functionName
+        log.lambdaVersion = lambdaVersion
+        log.fields = log.fields || {}
+        log.type = "cloudwatch"
 
-            socket.write(JSON.stringify(log) + '\n')
-          }
-        
-        } catch (err) {
-          console.error(err.message)
-        }
+        promises.push(
+          axios.post(
+            `https://${host}${logGroup}`, log
+          )
+        )
       }
-
-      socket.end()
-
-      resolve()
-    })
-  })
+    } catch (err) {
+      console.error(err.message)
+    }
+  }
+  
+  try {
+    await Promise.all(promises)
+  } catch (err) {
+    console.error(err.message)
+  }
 }
 
 module.exports = processAll

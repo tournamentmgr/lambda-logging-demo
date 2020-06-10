@@ -33,13 +33,18 @@ const parseLogMessage = function (logEvent) {
     return null
   }
 
-  let parts     = logEvent.message.split('\t', 3)
+  let parts     = logEvent.message.split('\t', 5)
   let timestamp = parts[0]
   let requestId = parts[1]
-  let event     = parts[2]
+  let logLevel  = parts[2]
+  let event     = parts[3]
   
+  if (logLevel == "ERROR") {
+    event     = parts[4]
+  }
+
   let fields = tryParseJson(event)
-  if (fields) {
+  if (fields && fields.message) {
     fields.requestId = requestId
 
     let level = (fields.level || 'debug').toLowerCase()
@@ -49,12 +54,12 @@ const parseLogMessage = function (logEvent) {
     delete fields.level
     delete fields.message
 
-    return { level, message, fields, '@timestamp': new Date(timestamp) }
+    return { level, message, fields, '@timestamp': new Date(timestamp).toISOString() }
   } else {
     return {
-      level        : 'debug',
+      level        : logLevel,
       message      : event,
-      '@timestamp' : new Date(timestamp)
+      '@timestamp' : new Date(timestamp).toISOString()
     }
   }
 }
